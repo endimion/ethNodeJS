@@ -1,0 +1,26 @@
+var  Web3 = require('web3');
+var  http = require('http');
+
+
+function start(){
+
+	function onRequest(request,response){
+		//this should be implemented to manage http requests
+	}//end of onRequest
+
+	//the stuff here has to to with monitoring the ethereum block chain
+
+	http.createServer(onRequest).listen(8888);
+	console.log("onRequest running");
+	var web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+        //web3 = new web3(new web3.providers.HttpProvider("http://localhost:8545"));
+	//var accounts = web3.eth.accounts;
+	var coinbase = web3.eth.coinbase;
+	var accounts = web3.eth.accounts;
+	console.log(coinbase);
+	console.log(accounts);
+	console.log("Ethereum monitoring node.js server started!!");
+
+}
+
+exports.start = start;
