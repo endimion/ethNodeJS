@@ -1,0 +1,118 @@
+// The first example is the deployment of a simple HelloWorld program
+// The solidity code for it is:
+
+contract mortal {
+    /* Define variable owner of the type address*/
+    address owner;
+
+    /* this function is executed at initialization and sets the owner of the contract */
+    function mortal() { owner = msg.sender; }
+
+    /* Function to recover the funds on the contract */
+    function kill() { if (msg.sender == owner) suicide(owner); }
+}
+
+contract greeter is mortal {
+    /* define variable greeting of the type string */
+    string greeting;
+
+    /* this runs when the contract is executed */
+    function greeter(string _greeting) public {
+        greeting = _greeting;
+    }
+
+    /* main function */
+    function greet() constant returns (string) {
+        return greeting;
+    }
+}
+
+//The next step is to run an etherum node! To run a private node we  use the following command:
+
+geth --genesis genesis_block.json --datadir ".test0" --networkid 51083 --nodiscover -maxpeers 10 --rpc  --rpccorsdomain="localhost"  --ipcpath "/home/nikos/.ethereum/geth.ipc"  console 
+
+// The above line defines a custom genesis block for the block-chain, genesis_block.json, a folder to store the current block chain: --datadir ".test0", a unique id for the network so that nobody will connect to it by chance, --networkid 51083, disables automatic recovery --nodiscover, sets a limit to the maximum number of peers to 10, -maxpeers 10. Additionally, (this is very important to programmatically connect to the block-chain as we shall see) we define the remote protocol call to be enabled and set it to "listen" at the localhost. The default address is 8545. This is done by --rpc --rpccrosdomain="localhost". Finally, if we want to have the mist browser connect to our private blockchain we have to set the --ipcpath to our local ipc path, in this case ~/.ethereum/geth.ipc
+
+
+
+//Next, we have to reformat it so that it fits into a string variable. There are tools for this: http://www.textfixer.com/tools/remove-line-breaks.php
+//So we get the following:
+
+var greeterSource = 'contract mortal { address owner; function mortal() { owner = msg.sender; } function kill() { if (msg.sender == owner) suicide(owner); } } contract greeter is mortal { string greeting; function greeter(string _greeting) public { greeting = _greeting; } function greet() constant returns (string) { return greeting; } }'
+
+
+// The next step is to compile the contract. To do so you require a Solidity compiler installed, locally (see https://www.ethereum.org/greeter for instructions)
+var greeterCompiled = web3.eth.compile.solidity(greeterSource)
+
+//The next step is to "inject" the contract to the block chain. This is achieved by sending a new transaction to the network basically. To do this you need to "pay" the cost of inserting the contract in ehter. So, you need a account to pay. The account you define though, has to be unlocked in order to authorize this transaction. In previous versions of geth, the unlocking was promted when you send the transaction it seems however that now it is BUGGED! So we unlock it manually:
+
+primaryAccount = web3.eth.accounts[0];
+personal.unlockAccount(primaryAccount, "panathinaikos")
+
+//Next, we inject the contract!
+
+var _greeting = "Hello World!"
+var greeterContract = web3.eth.contract(greeterCompiled.greeter.info.abiDefinition);
+
+// this second line creates a new contract object, using the ABI (of our previously compiled contract, geeterCompiled). The ABI is a definition of the signature of the methods of the contract, like an API.
+
+var greeter = greeterContract.new(_greeting,{from:web3.eth.accounts[0], data: greeterCompiled.greeter.code, gas: 300000}, function(e, contract){
+    if(!e) {
+
+      if(!contract.address) {
+        console.log("Contract transaction send: TransactionHash: " + contract.transactionHash + " waiting to be mined...");
+
+      } else {
+        console.log("Contract mined! Address: " + contract.address);
+        console.log(contract);
+      }
+    }
+})
+// The contract is injected, by sending a new transaction in which the sender is the account we unlocked, the code of the tranaction is the code of the compiled contract, the gas value is the gas the account makes available for the execution of the contract and finally, we pass a call-back function that is executed when the contract is mined to alert us of the new address the contract will receive in the block-chain.
+
+//In order to use this contract ofcourse we have to mine it first!!
+//So call miner.start(n); in the geth terminal, where n denotes the number of processors we want to use and then when we see the message Contract mined! Address: 0x8b9b56f521155a236e4093be6cdb5ef6c7bada28 (*** denote the blockcahin address of the newly created contract account) we can stop mining using: miner.stop(n);
+
+
+//For other people to run the contract they need two things, the ABI and its address. These can be retrieve after we create the contract as follows, and then ofcourse sent to the other users
+
+var addr = greeter.address; 
+// addr = "0x8b9b56f521155a236e4093be6cdb5ef6c7bada28"
+
+var ABI = greeterCompiled.greeter.info.abiDefinition;
+/*
+ABI
+[{
+    constant: false,
+    inputs: [],
+    name: "kill",
+    outputs: [],
+    type: "function"
+}, {
+    constant: true,
+    inputs: [],
+    name: "greet",
+    outputs: [{
+        name: "",
+        type: "string"
+    }],
+    type: "function"
+}, {
+    inputs: [{
+        name: "_greeting",
+        type: "string"
+    }],
+    type: "constructor"
+}]
+*/
+
+//Then a third party can use our contract as:
+var greet2 = eth.contract(ABI).at(addr);
+//> var greet2 = eth.contract(ABI).at(addr);
+//undefined
+//> greet2.greet()
+//"Hello World!"
+
+
+
+

@@ -1,0 +1,44 @@
+
+
+
+var supply = 10000; 
+var tokenContract = web3.eth.contract(tokenCompiled.token.info.abiDefinition); 
+var token = tokenContract.new( supply, { from:web3.eth.accounts[2], data:tokenCompiled.token.code, gas: 1000000 }, function(e, contract){ 
+	if(!e) { 
+		if(!contract.address){ 
+			console.log("Contract transaction send: TransactionHash: " + contract.transactionHash +" waiting to be mined..."); 
+		} else { 
+				console.log("Contract mined! Address: " + contract.address); 
+				console.log(contract); 
+			} 
+		} }
+);
+
+
+geth --genesis genesis_block.json --datadir ".test0" --networkid 51083 --nodiscover -maxpeers 10 --rpc  --rpccorsdomain="localhost"  --ipcpath "/home/nikos/.ethereum/geth.ipc"  console 
+
+
+-- unlock "2c4b6868ac3c3d1243a4727e56eb14f32ccf3440"
+
+
+
+
+source = "contract test { function multiply(uint a) returns(uint d) { return a * 7; } }"
+contract = eth.compile.solidity(source)
+var myContract = web3.eth.contract(contract.test.info.abiDefinition);
+
+primaryAccount = web3.eth.accounts[0];
+personal.unlockAccount(primaryAccount, "password")
+
+myContract.new({from: primaryAccount, data: contract.code}, function(error, contract){
+  if(!error && contract.address) {
+    // calculates the content hash and registers it with the code hash in `HashReg`
+    // it uses address to send the transaction. 
+    // returns the content hash that we use to register a url
+    admin.register(primaryAccount, contract.address, contenthash)
+    // here you deploy ~/dapps/shared/contracts/test/info.json to a url
+    admin.registerUrl(primaryAccount, hash, url)
+	console.log("Contract mined! Address: " + contract.address);
+        console.log(contract);
+  }
+});
